@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.Observer;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
@@ -11,10 +12,12 @@ import java.util.concurrent.ScheduledFuture;
 
 public class NoteRepository {
     private final NoteDao dao;
+    private final NoteAPI api;
     private ScheduledFuture<?> poller; // what could this be for... hmm?
 
     public NoteRepository(NoteDao dao) {
         this.dao = dao;
+        this.api = new NoteAPI();
     }
 
     // Synced Methods
@@ -108,7 +111,6 @@ public class NoteRepository {
     }
 
     public void upsertRemote(Note note) {
-        // TODO: Implement upsertRemote!
-        throw new UnsupportedOperationException("Not implemented yet");
+        api.putNoteAsync(note);
     }
 }
