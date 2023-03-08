@@ -5,6 +5,8 @@ import android.util.Log;
 import androidx.annotation.AnyThread;
 import androidx.annotation.WorkerThread;
 
+import com.google.gson.Gson;
+
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -37,6 +39,34 @@ public class NoteAPI {
         return instance;
     }
 
+    @WorkerThread
+    public Note getNote(String title) {
+        var request = new Request.Builder()
+                .url("https://sharednotes.goto.ucsd.edu/notes/" + title.replace(" ", "%20"))
+                .method("GET", null)
+                .build();
+
+        try (var response = client.newCall(request).execute()) {
+            assert response.body() != null;
+            var body = response.body().string();
+            if(!body.equals("{\"detail\":\"Note not found.\"}")){
+                return new Gson().fromJson(body, Note.class);
+            }
+            return null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @AnyThread
+    public Future<Note> getNoteAsync(String title) {
+        var executor = Executors.newSingleThreadExecutor();
+        var future = executor.submit(() -> getNote(title));
+
+        // We can use future.get(1, SECONDS) to wait for the result.
+        return future;
+    }
 
     @WorkerThread
     public Response putNote(Note note) {
