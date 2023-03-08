@@ -11,8 +11,10 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class NoteRepository {
@@ -112,15 +114,21 @@ public class NoteRepository {
         // you don't create a new polling thread every time you call getRemote with the same title.
         // You don't need to worry about killing background threads.
 
-        try {
-            return  new MutableLiveData<>(api.getNoteAsync(title).get(1, SECONDS));
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException(e);
-        }
+        var executor = Executors.newSingleThreadScheduledExecutor();
+
+        var resultNote = new MutableLiveData<Note>();
+
+        poller = executor.scheduleAtFixedRate(() -> {
+            var tempNote = resultNote.getValue();
+            try {
+                tempNote = api.getNoteAsync(title).get(1, SECONDS);
+            } catch (ExecutionException | InterruptedException | TimeoutException e) {
+                throw new RuntimeException(e);
+            }
+            resultNote.postValue(tempNote);
+        }, 0, 3000, TimeUnit.MILLISECONDS);
+
+        return resultNote;
     }
 
     public void upsertRemote(Note note) {
